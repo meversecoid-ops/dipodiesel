@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DIPO Naxtech</title>
+<meta name="description" content="DIPO Diesel Fuel Injection System: injection pump, common rail, injector assy dan komponen untuk kendaraan dan alat berat. Distributor resmi di seluruh Indonesia.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: satu rel horizontal berisi 17 panel setinggi layar; satu kanvas WebGL tetap di belakang,
+   model 3D menempel pada elemen jangkar di tiap panel dan ikut bergeser saat dijelajah. */
+:root{
+  color-scheme:light;
+  --bg:#F1F0EB; --paper:#FAF9F6; --ink:#14161A; --ink2:#4A4F57; --line:#C8C7BF;
+  --red:#E70013; --red-ink:#C4000F; --orange:#F26A21; --gold:#B88A1F; --navy:#16202E;
+  --display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --body:'Barlow',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  --pad:clamp(20px,5.2vw,84px); --top:68px; --bot:64px;
+}
+*{box-sizing:border-box;margin:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{overflow-x:hidden}
+img{max-width:100%;display:block}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--red);outline-offset:3px;border-radius:4px}
+h1,h2,h3{font-family:var(--display);font-weight:800;line-height:.98;letter-spacing:-.005em;text-wrap:balance}
+h2{font-size:clamp(2.2rem,4.6vw,4.5rem)}
+h3{font-size:clamp(1.35rem,1.9vw,1.8rem);font-weight:700;line-height:1.05}
+p{text-wrap:pretty}
+.mono{font-family:var(--mono);font-weight:500;letter-spacing:.01em}
+.eyebrow{font-family:var(--mono);font-weight:500;font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);display:flex;align-items:center;gap:.7em;margin-bottom:1.1rem}
+.eyebrow::before{content:"";width:28px;height:2px;background:var(--red)}
+.ico{width:1.5em;height:1.5em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---------- latar blueprint + kanvas ---------- */
+#bp{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+   linear-gradient(to right,rgba(20,22,26,.07) 1px,transparent 1px),
+   linear-gradient(to bottom,rgba(20,22,26,.07) 1px,transparent 1px),
+   linear-gradient(to right,rgba(20,22,26,.035) 1px,transparent 1px),
+   linear-gradient(to bottom,rgba(20,22,26,.035) 1px,transparent 1px);
+  background-size:280px 280px,280px 280px,56px 56px,56px 56px;
+  -webkit-mask-image:radial-gradient(ellipse at 50% 45%,#000 30%,rgba(0,0,0,.35) 100%);mask-image:radial-gradient(ellipse at 50% 45%,#000 30%,rgba(0,0,0,.35) 100%)}
+#gl{position:fixed;inset:0;z-index:1;pointer-events:none}
+
+/* ---------- header & rail ---------- */
+.top{position:fixed;inset:0 0 auto 0;height:var(--top);z-index:6;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 var(--pad);
+  background:linear-gradient(var(--bg) 55%,rgba(241,240,235,0))}
+.brand{display:flex;align-items:center;gap:14px;text-decoration:none}
+.brand img{height:34px;width:auto}
+.where{font-family:var(--mono);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);display:flex;gap:.9em;align-items:center}
+.where b{color:var(--ink);font-weight:500}
+.where i{width:26px;height:1px;background:var(--line)}
+.btn{display:inline-flex;align-items:center;gap:.6em;font-weight:600;font-size:.95rem;text-decoration:none;padding:.78em 1.25em;border-radius:999px;border:1.5px solid var(--ink);transition:transform .2s,background .2s,color .2s,box-shadow .2s;white-space:nowrap}
+.btn:hover{transform:translateY(-2px)}
+.btn.red{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 10px 24px -10px rgba(231,0,19,.7)}
+.btn.red:hover{background:var(--red-ink);border-color:var(--red-ink)}
+.btn.ghost:hover{background:var(--ink);color:var(--bg)}
+.btn.sm{padding:.55em 1.05em;font-size:.86rem}
+.btn img{width:20px;height:20px}
+.btn svg{width:1.15em;height:1.15em}
+
+.rail{position:fixed;right:clamp(8px,1.4vw,24px);top:50%;transform:translateY(-50%);height:min(62vh,520px);width:44px;z-index:6;display:flex;flex-direction:column;align-items:center;gap:10px}
+.ruler{position:relative;flex:1;width:44px}
+.ruler .base{position:absolute;left:21px;top:0;bottom:0;width:1px;background:var(--ink2);opacity:.55}
+.ruler .fill{position:absolute;left:20px;top:0;width:3px;height:0;background:var(--red)}
+.ruler .minor{position:absolute;left:17px;top:0;bottom:0;width:6px;opacity:.35;background:repeating-linear-gradient(180deg,var(--ink) 0 1px,transparent 1px 14px)}
+.tk{position:absolute;left:0;width:44px;height:28px;margin-top:-14px;display:flex;align-items:center;justify-content:center}
+.tk::before{content:"";height:1.5px;width:14px;background:var(--ink2);transition:width .2s,background .2s}
+.tk:hover::before,.tk.on::before{width:24px;height:2px;background:var(--red)}
+.tk span{position:absolute;right:calc(100% - 6px);top:50%;transform:translateY(-50%);white-space:nowrap;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;background:var(--ink);color:var(--bg);padding:.35em .7em;border-radius:6px;opacity:0;pointer-events:none;transition:opacity .15s}
+.tk:hover span,.tk:focus-visible span{opacity:1}
+.count{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;color:var(--ink2);text-align:center;line-height:1.2}
+.count b{color:var(--ink);font-weight:500;display:block}
+#prog{position:fixed;left:0;top:0;height:3px;width:100%;background:var(--red);transform-origin:0 50%;transform:scaleX(0);z-index:7}
+
+/* ---------- rel & panel ---------- */
+#track{position:relative;z-index:2}
+.slide{width:100%;min-height:100vh;min-height:100svh;padding:calc(var(--top) + 28px) var(--pad) 56px;display:flex;align-items:center;position:relative}
+.slide.wide{width:100%}
+.s2{display:grid;grid-template-columns:minmax(0,1.04fr) minmax(0,1fr);gap:clamp(24px,4vw,72px);align-items:center;width:100%}
+.s2.rev{grid-template-columns:minmax(0,1fr) minmax(0,1.04fr)}
+.s2.wide-l{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}.s2.wide-l.map{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}
+.lead{color:var(--ink2);font-size:clamp(1rem,1.25vw,1.2rem);max-width:34em}
+.a3d{position:relative;width:100%;height:min(66vh,620px);min-height:260px}
+.a3d .fb{display:none;position:absolute;inset:0;margin:auto;max-height:100%;object-fit:contain;mix-blend-mode:multiply}
+.no-gl .a3d .fb{display:block}
+.no-gl #gl{display:none}
+.a3d::after{content:"";position:absolute;left:12%;right:12%;bottom:4%;height:7%;background:radial-gradient(closest-side,rgba(20,22,26,.2),transparent);filter:blur(6px);z-index:-1}
+.tag3d{position:absolute;right:0;bottom:-4px;font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);display:flex;align-items:center;gap:.6em}
+.tag3d::before{content:"";width:18px;height:18px;border:1.5px solid var(--ink2);border-radius:50%;background:radial-gradient(circle,var(--ink2) 2px,transparent 3px)}
+@media (max-width:820px){.tag3d{display:none}}
+
+/* reveal: terlihat saat diam; hanya disembunyikan untuk panel yang belum pernah dilihat */
+html.js .rv{transition:opacity .8s cubic-bezier(.2,.7,.2,1) var(--d,0s),transform .8s cubic-bezier(.2,.7,.2,1) var(--d,0s)}
+html.js .rv:not(.in){opacity:0;transform:translateY(26px)}
+
+/* ---------- 00 hero ---------- */
+.hero .s2{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+.hero h1{font-size:clamp(2.8rem,6.3vw,6.4rem);text-transform:uppercase;line-height:.9;margin-bottom:1rem}
+.hero h1 em{font-style:normal;color:var(--red)}
+.hero .sub{font-size:clamp(1.1rem,1.7vw,1.5rem);font-weight:500;margin-bottom:1.3rem}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem .6rem;margin-bottom:1.7rem;list-style:none;padding:0}
+.chips li{font-size:.86rem;font-weight:500;padding:.38em .9em;border:1px solid var(--line);border-radius:999px;background:rgba(250,249,246,.7)}
+.badges{display:flex;flex-wrap:wrap;gap:1.2rem 2rem;margin-top:1.8rem;padding-top:1.4rem;border-top:1px solid var(--line);list-style:none;padding-left:0}
+.badges li{display:flex;align-items:center;gap:.7rem;font-weight:600;font-size:.95rem;line-height:1.2}
+.badges .ico{width:2.1rem;height:2.1rem;padding:.38rem;border:1.5px solid var(--ink);border-radius:50%}
+.cta-row{display:flex;flex-wrap:wrap;gap:.8rem}
+.hint{position:absolute;left:var(--pad);bottom:calc(var(--bot) + 18px);display:none}
+.swipe{display:inline-flex;align-items:center;gap:.7em;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);margin-top:1.4rem}
+.swipe svg{width:1.6em;height:1.6em;transform:rotate(90deg);animation:nudge 1.6s ease-in-out infinite}
+@keyframes nudge{50%{transform:translateY(7px) rotate(90deg)}}
+
+/* ---------- 01 mitra ---------- */
+.rows{border:1.5px solid var(--ink);background:rgba(250,249,246,.75);margin-top:1.8rem;max-width:640px}
+.rows>div{display:grid;grid-template-columns:minmax(0,.38fr) minmax(0,1fr);gap:1.2rem;padding:1.05rem 1.3rem;align-items:start}
+.rows>div+div{border-top:1.5px solid var(--ink)}
+.rows h3{padding-top:.1rem}
+.rows p{color:var(--ink2);font-size:.98rem}
+
+/* ---------- 02 produk ---------- */
+.prod{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(12px,1.6vw,24px);width:100%;margin-top:1.6rem}
+.card{position:relative;background:var(--paper);border:1.5px solid var(--ink);border-radius:6px;padding:1rem 1rem 1.2rem;transform-style:preserve-3d;transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .25s ease-out,box-shadow .25s;will-change:transform}
+.card:hover{box-shadow:0 24px 40px -22px rgba(20,22,26,.45)}
+.card .n{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;color:var(--red-ink)}
+.card .pic{aspect-ratio:1.25;display:grid;place-items:center;margin:.4rem 0 .6rem}
+.card .pic img{max-height:100%;object-fit:contain;mix-blend-mode:multiply;transform:translateZ(30px)}
+.card p{color:var(--ink2);font-size:.92rem;margin-top:.35rem;line-height:1.4}
+.s-head{width:100%}
+.s-head .lead{margin-top:.9rem}
+
+/* ---------- 03 sektor ---------- */
+.sector{position:relative;transform:perspective(1100px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .3s ease-out}
+.sector img{width:100%}
+.pills{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1.6rem;list-style:none;padding:0}
+.pills li{display:flex;align-items:center;gap:.6em;font-weight:600;padding:.6em 1em;border:1.5px solid var(--ink);border-radius:6px;background:var(--paper)}
+.pills .ico{color:var(--red-ink)}
+
+/* ---------- 04 tekanan tinggi ---------- */
+.specs{display:grid;gap:.9rem;margin-top:1.6rem;max-width:520px}
+.spec{border:1.5px solid var(--ink);background:rgba(250,249,246,.85);padding:1rem 1.2rem;position:relative;transition:transform .25s,box-shadow .25s;cursor:default}
+.spec::after{content:"";position:absolute;right:-1.5px;top:50%;width:0;height:2px;background:var(--orange);transition:width .3s}
+.spec:hover,.spec.on{transform:translateX(8px);box-shadow:-8px 10px 0 -2px rgba(242,106,33,.25)}
+.spec h3{margin-bottom:.25rem;font-size:1.4rem}
+.spec p{color:var(--ink2);font-size:.95rem;line-height:1.45}
+.cut{position:relative}
+.cut img{width:100%}
+.hot{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:2px solid var(--orange);animation:ping 2.2s infinite;pointer-events:none}
+.hot.on{background:rgba(242,106,33,.25);animation:none;transform:scale(1.5)}
+@keyframes ping{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.9);opacity:0}}
+
+/* ---------- 05 injector ---------- */
+.callouts{display:grid;gap:0;margin-top:1.6rem;max-width:520px}
+.callouts>div{padding:1.05rem 0 1.05rem 1.4rem;border-top:1.5px solid var(--ink);position:relative}
+.callouts>div:last-child{border-bottom:1.5px solid var(--ink)}
+.callouts>div::before{content:"";position:absolute;left:0;top:1.5rem;width:9px;height:9px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 5px rgba(242,106,33,.2)}
+.callouts p{color:var(--ink2);font-size:.97rem;margin-top:.15rem}
+
+/* ---------- 06 komponen ---------- */
+.parts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(8px,2vw,32px);width:100%;margin-top:1rem}
+.part{text-align:center}
+.part .a3d{height:min(34vh,300px);min-height:150px}
+.part h3{margin-top:.3rem}
+.part p{color:var(--ink2);font-size:.93rem;max-width:15em;margin:.35rem auto 0}
+.part .dim{height:14px;margin:.2rem 12% .5rem;border-left:1.5px solid var(--ink2);border-right:1.5px solid var(--ink2);position:relative;opacity:.7}
+.part .dim::after{content:"";position:absolute;left:0;right:0;top:50%;height:1.5px;background:var(--ink2)}
+
+/* ---------- 07-08 katalog ---------- */
+.cat{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:clamp(14px,1.6vw,22px);width:100%}
+.cat-intro{grid-column:1/-1;display:flex;flex-direction:column;padding-bottom:.8rem;max-width:44rem}
+.cat-intro .lead{margin-top:1rem}
+.cat-intro .btn{margin-top:1.4rem;align-self:flex-start}
+.item{background:var(--paper);border:1.5px solid var(--ink);border-radius:6px;display:flex;flex-direction:column;transition:transform .25s ease-out,box-shadow .25s}
+.item:hover{transform:translateY(-6px);box-shadow:0 26px 36px -24px rgba(20,22,26,.5)}
+.item .ph{position:relative;aspect-ratio:1.12;background:#ECEBE5;border-bottom:1.5px solid var(--ink);overflow:hidden;display:grid;place-items:center}
+.item .ph img{width:100%;height:100%;object-fit:cover}
+.item .ph.contain img{object-fit:contain;mix-blend-mode:multiply;padding:6%}
+.item .no{position:absolute;left:0;top:0;background:var(--navy);color:#fff;font-family:var(--mono);font-size:.8rem;padding:.35em .8em;border-bottom-right-radius:6px}
+.item .bd{padding:.9rem 1rem 1rem;display:flex;flex-direction:column;gap:.3rem;flex:1}
+.item .k{font-size:.72rem;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink2)}
+.item .pn{font-family:var(--mono);font-weight:500;font-size:1.02rem;color:#1B7A3B;overflow-wrap:anywhere}
+.item .tp{font-weight:600}
+.item .ap{color:var(--ink2);font-size:.88rem;line-height:1.4;border-top:2px solid var(--red);padding-top:.55rem;margin-top:.25rem}
+.item .bd .btn{margin-top:auto;align-self:flex-start}
+.item .bd .ap+.btn{margin-top:.7rem}
+.item .ti{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.item .ti .ico{color:var(--navy)}
+.cat-note{grid-column:1/-1;margin-top:.6rem;padding-top:1.2rem;border-top:1.5px solid var(--ink)}
+.cat-note ul{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem 1.6rem}
+.cat-note li{display:flex;gap:.7rem;align-items:flex-start;font-size:.95rem;line-height:1.35}
+.cat-note li .ico{color:var(--red-ink);margin-top:.05rem}
+
+/* ---------- 09 identifikasi ---------- */
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-top:1.8rem;position:relative;width:100%}
+.step{position:relative;padding:0 1.2rem 0 0}
+.step .no{width:56px;height:56px;border-radius:50%;border:1.5px solid var(--ink);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:1.5rem;background:var(--paper);position:relative;z-index:1;transition:background .3s,color .3s,border-color .3s}
+.step:hover .no{background:var(--red);color:#fff;border-color:var(--red)}
+.step::before{content:"";position:absolute;left:56px;right:0;top:27px;height:2px;background:repeating-linear-gradient(90deg,var(--orange) 0 8px,transparent 8px 16px);animation:dash 1s linear infinite}
+.step:last-child::before{display:none}
+@keyframes dash{to{background-position:16px 0}}
+.step h3{margin-top:1rem}
+.step p{color:var(--ink2);font-size:.95rem;margin-top:.3rem;max-width:15em}
+.callout{margin-top:2.2rem;border:1.5px solid var(--ink);border-radius:6px;background:rgba(250,249,246,.85);padding:1.2rem 1.5rem;font-size:clamp(1rem,1.35vw,1.25rem);max-width:56em}
+.callout b{font-weight:600}
+
+/* ---------- 10 verifikasi ---------- */
+.checks{list-style:none;padding:0;display:grid;gap:1rem;margin-top:1.6rem}
+.checks li{display:flex;gap:.9rem;align-items:flex-start;font-size:clamp(1rem,1.3vw,1.2rem);font-weight:500}
+.checks .ico{width:2rem;height:2rem;padding:.3rem;border-radius:6px;background:#1F9D4C;color:#fff;stroke-width:2.4}
+.dimbox{position:relative}
+.dimbox .a3d{height:min(62vh,560px)}
+.dimbox svg.dm{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.8}
+
+/* ---------- 11 mengapa ---------- */
+.why{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(10px,1.2vw,18px);width:100%;margin-top:1.8rem}
+.why .card{display:flex;flex-direction:column;gap:.5rem;min-height:min(46vh,380px);padding:1.2rem}
+.why .big{font-family:var(--display);font-weight:800;font-size:clamp(2.6rem,4vw,4rem);line-height:1;color:transparent;-webkit-text-stroke:1.5px var(--ink)}
+.why .ico{width:2.4rem;height:2.4rem;color:var(--red-ink);transform:translateZ(30px);margin-top:auto}
+.why h3{font-size:1.45rem;text-transform:uppercase}
+.why p{color:var(--ink2);font-size:.93rem;line-height:1.4}
+
+/* ---------- 12 suplai ---------- */
+.stock{position:relative;border:1.5px solid var(--ink);overflow:hidden;margin:1.4rem 0 0;max-height:34vh}
+.stock img{width:100%;height:100%;object-fit:cover;max-height:34vh}
+.stock::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 6px rgba(250,249,246,.0)}
+.tri{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1.5px solid var(--ink);border-top:0;background:rgba(250,249,246,.9)}
+.tri>div{padding:1rem 1.3rem}
+.tri>div+div{border-left:1.5px solid var(--ink)}
+.tri p{color:var(--ink2);font-size:.95rem;margin-top:.2rem}
+
+/* ---------- 13 distribusi ---------- */
+.dist{display:flex;align-items:center;justify-content:center;gap:0;margin:2.2rem auto 1.6rem;width:100%;max-width:1180px}
+.node{border:1.5px solid var(--ink);background:var(--paper);border-radius:6px;padding:1.5rem 1.8rem;display:flex;align-items:center;gap:.9rem;min-width:0}
+.node .ico{width:2.8rem;height:2.8rem;color:var(--ink)}
+.node small{display:block;color:var(--ink2);font-size:.82rem;font-weight:500}
+.node h3{font-size:2rem}.node small{font-size:.9rem}
+.node.main{border-color:var(--red);box-shadow:0 0 0 4px rgba(231,0,19,.1)}
+.node.main .ico{color:var(--red)}
+.pipe{flex:1 1 60px;height:10px;min-width:40px;position:relative;background:linear-gradient(var(--orange),var(--orange)) center/100% 3px no-repeat}
+.pipe::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.95) 0 10px,transparent 10px 40px);mix-blend-mode:soft-light;animation:dash 1s linear infinite}
+.fan{display:grid;gap:.9rem;position:relative;padding-left:44px}
+.fan::before{content:"";position:absolute;left:0;top:2.2rem;bottom:2.2rem;width:3px;background:var(--orange)}
+.fan .node{position:relative;padding:1rem 1.4rem}
+.fan .node::before{content:"";position:absolute;left:-44px;top:50%;width:44px;height:3px;background:var(--orange)}
+.fan .node h3{font-size:1.55rem}
+.fan .node .ico{width:2.1rem;height:2.1rem}
+.note{max-width:1100px;margin:0 auto;border:1.5px solid var(--ink);padding:1rem 1.4rem;font-size:1.05rem;text-align:center;font-weight:600;background:rgba(250,249,246,.85)}
+
+/* ---------- 14 solusi ---------- */
+.hx-wrap{display:flex;flex-direction:column;align-items:center;gap:0;margin-top:1rem}
+.hx-row{display:flex;gap:10px;justify-content:center}
+.hx-row+.hx-row{margin-top:calc(var(--hh) * -.14)}
+.hx{--hh:clamp(120px,22vh,190px);width:calc(var(--hh) * 1.12);height:var(--hh);clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);background:var(--ink);position:relative;transition:transform .3s,background .3s}
+.hx::before{content:"";position:absolute;inset:2px;clip-path:inherit;background:var(--paper);transition:background .3s}
+.hx div{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35rem;text-align:center;padding:0 16%;font-family:var(--display);font-weight:700;font-size:clamp(.95rem,1.25vw,1.2rem);line-height:1.05}
+.hx .ico{width:2.2rem;height:2.2rem;color:var(--ink);transition:color .3s}
+.hx:hover{transform:translateY(-6px) scale(1.04);background:var(--red)}
+.hx:hover::before{background:#FFF3F3}
+.hx:hover .ico{color:var(--red)}
+.hx-row{--hh:clamp(120px,22vh,190px)}
+.band{margin-top:1.6rem;background:var(--navy);color:#fff;border-radius:6px;padding:1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;width:100%}
+.band p{font-weight:600;font-size:clamp(1rem,1.4vw,1.25rem);max-width:34em}
+
+/* ---------- 15 global ---------- */
+.mapbox{position:relative}
+.mapbox img{width:100%}
+.stats{display:flex;flex-wrap:wrap;gap:1.4rem 2.4rem;margin:1.5rem 0 1.4rem}
+.stat b{display:block;font-family:var(--display);font-weight:800;font-size:clamp(2.6rem,4.4vw,4.2rem);line-height:1;color:var(--gold)}
+.stat span{font-size:.88rem;color:var(--ink2);font-weight:500}
+.regions{display:flex;flex-wrap:wrap;gap:.45rem;list-style:none;padding:0;margin-top:1.2rem}
+.regions li{font-size:.84rem;font-weight:600;padding:.3em .8em;border-radius:999px;background:rgba(184,138,31,.13);border:1px solid rgba(184,138,31,.45)}
+
+/* ---------- 16 kontak ---------- */
+.cta h2{font-size:clamp(3rem,7vw,6.8rem);text-transform:uppercase;line-height:.9}
+.cta h2 em{font-style:normal;color:var(--red)}
+.cta .big2{font-family:var(--display);font-weight:700;font-size:clamp(1.5rem,2.6vw,2.4rem);line-height:1.05;margin:.9rem 0 1.3rem}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .7rem;font-family:var(--mono);font-weight:500;font-size:.9rem;letter-spacing:.06em}
+.chain svg{width:1.1em;height:1.1em;color:var(--red)}
+.wa{display:flex;align-items:center;gap:1.2rem;background:var(--navy);color:#fff;border-radius:10px;padding:1.3rem 1.6rem;text-decoration:none;margin-top:1.8rem;max-width:520px;transition:transform .25s,box-shadow .25s}
+.wa:hover{transform:translateY(-4px);box-shadow:0 22px 34px -18px rgba(22,32,46,.7)}
+.wa img{width:64px;height:64px}
+.wa b{display:block;font-family:var(--display);font-size:1.6rem;line-height:1.05;font-weight:700}
+.wa .mono{font-size:1.5rem;letter-spacing:.04em;display:block;margin-top:.2rem}
+.foot{display:flex;align-items:center;gap:1rem;margin-top:1.6rem;color:var(--ink2);font-size:.85rem}
+.foot img{height:30px;width:auto}
+
+/* ---------- mobile ---------- */
+@media (max-width:1100px){
+  .prod{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .why{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .flow{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:1.6rem}
+  .step:nth-child(2)::before{display:none}
+}
+@media (max-width:820px){
+  :root{--top:60px;--bot:60px}
+  html,body{font-size:16px}
+  .slide{align-items:flex-start;min-height:0;padding-top:calc(var(--top) + 18px);padding-bottom:44px}
+  .rail{display:none}
+  .s2,.s2.rev,.s2.wide-l,.s2.wide-l.map,.hero .s2{grid-template-columns:minmax(0,1fr);gap:8px}
+  .s2.rev>.a3d,.s2.rev>.cut,.s2.rev>.dimbox,.s2.rev>.mapbox,.s2.rev>.sector{order:-1}
+  .a3d{height:34vh;min-height:200px}
+  .where{display:none}
+  .top .btn span{display:none}
+  .top .btn{padding:.6em .8em}
+  .hero h1{font-size:clamp(2.7rem,14vw,4rem)}
+  .hero .a3d{order:-1;height:30vh;min-height:190px}
+  .rows>div{grid-template-columns:1fr;gap:.3rem}
+  .parts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .part .a3d{height:20vh;min-height:120px}
+  .why{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .why .card{min-height:0}
+  .tri{grid-template-columns:1fr}.tri>div+div{border-left:0;border-top:1.5px solid var(--ink)}
+  .dist{flex-direction:column}
+  .pipe{flex:0 0 36px;width:10px;min-width:0;height:36px;background:linear-gradient(var(--orange),var(--orange)) center/3px 100% no-repeat}
+  .pipe::after{display:none}
+  .fan{padding-left:0;padding-top:44px;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fan::before{left:25%;right:25%;top:0;bottom:auto;width:auto;height:3px}
+  .fan .node::before{left:50%;top:-44px;width:3px;height:44px}
+  .hx-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%;max-width:360px}
+  .hx-row{display:contents}
+  .hx-row+.hx-row{margin-top:0}
+  .hx{width:100%;height:auto;aspect-ratio:1.12/1}
+  .hx div{font-size:.98rem;padding:0 15%}
+  .hx-row:last-child .hx:last-child{grid-column:1/-1;justify-self:center;width:50%}
+  .cat{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .item .bd{padding:.7rem .75rem .8rem}
+  .item .pn{font-size:.9rem}
+  .flow{grid-template-columns:1fr}.step::before{display:none}
+  .stats{gap:1rem 1.6rem}
+}
+@media (max-height:760px) and (min-width:821px){
+  h2{font-size:clamp(2rem,4vw,3.4rem)}
+  .hero h1{font-size:clamp(2.6rem,5.4vw,5rem)}
+  .hero .chips{margin-bottom:1.1rem}.badges{margin-top:1.1rem;padding-top:1rem}.swipe{display:none}
+  .rows{margin-top:1.2rem}.rows>div{padding:.75rem 1.1rem}
+  .specs,.callouts,.checks{margin-top:1.1rem}.spec{padding:.75rem 1rem}
+  .why .card{min-height:0}.flow{margin-top:1.2rem}.callout{margin-top:1.4rem}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+    <symbol id="i-gem" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M12 21L8 9l4-6 4 6z"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><rect x="3" y="3" width="11" height="11" rx="2"/><rect x="10" y="10" width="11" height="11" rx="2"/></symbol>
+    <symbol id="i-headset" viewBox="0 0 24 24"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><rect x="2" y="14" width="4" height="6" rx="1.5"/><rect x="18" y="14" width="4" height="6" rx="1.5"/><path d="M20 20c0 1.5-2 2-5 2h-2"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7z"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+    <symbol id="i-bus" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M3 11h18"/><circle cx="7.5" cy="19.5" r="1.5"/><circle cx="16.5" cy="19.5" r="1.5"/><path d="M7 14h.01M17 14h.01"/></symbol>
+    <symbol id="i-exc" viewBox="0 0 24 24"><rect x="2" y="17" width="13" height="4" rx="2"/><path d="M5 17v-4h6v4"/><path d="M11 13l4-7 4 2"/><path d="M19 8l2 5h-4"/></symbol>
+    <symbol id="i-dozer" viewBox="0 0 24 24"><rect x="3" y="16" width="14" height="4" rx="2"/><path d="M6 16v-4h6v4"/><path d="M17 17h3"/><path d="M21 10v10"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><path d="M3 15l2-6a2 2 0 0 1 2-1.5h10A2 2 0 0 1 19 9l2 6v3H3z"/><circle cx="7.5" cy="17.5" r="1.6"/><circle cx="16.5" cy="17.5" r="1.6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></symbol>
+    <symbol id="i-helmet" viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0"/><path d="M2 16h20v2H2z"/><path d="M12 8V5"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3"/><path d="M20 16H6l3 3"/></symbol>
+    <symbol id="i-factory" viewBox="0 0 24 24"><path d="M3 21V10l6 4v-4l6 4V6h3v15z"/><path d="M3 21h18"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M5 12v9h14v-9"/><path d="M10 21v-5h4v5"/></symbol>
+    <symbol id="i-badge" viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M8.5 14L7 22l5-3 5 3-1.5-8"/></symbol>
+  </defs>
+</svg>
+
+<div id="bp" aria-hidden="true"></div>
+<canvas id="gl" aria-hidden="true"></canvas>
+
+<header class="top">
+  <a class="brand" href="#" data-go="0" aria-label="DIPO Naxtech, kembali ke awal"><img src="img/logo.png" alt="DIPO Naxtech"></a>
+  <div class="where" aria-live="polite"><span>Bagian</span><i></i><b id="secName">Beranda</b></div>
+  <a class="btn red sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin bertanya tentang produk." target="_blank" rel="noopener"><img src="img/wa.png" alt=""><span>Hubungi via WhatsApp</span></a>
+</header>
+
+<main id="track" tabindex="-1" aria-label="Profil perusahaan DIPO, gulir ke bawah untuk menjelajah">
+
+<!-- 00 BERANDA -->
+<section class="slide hero" data-name="Beranda" aria-label="Beranda">
+  <div class="s2">
+    <div>
+      <p class="eyebrow rv">The High-Tolerance Engineering Studio</p>
+      <h1 class="rv" style="--d:.05s">DIPO Diesel Fuel <em>Injection</em> System</h1>
+      <p class="sub rv" style="--d:.12s">Sparepart Diesel untuk Kendaraan &amp; Alat Berat</p>
+      <ul class="chips rv" style="--d:.18s"><li>Injection Pump</li><li>Common Rail</li><li>Injector Assy</li><li>Components</li></ul>
+      <div class="cta-row rv" style="--d:.24s">
+        <a class="btn red" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin cek ketersediaan part." target="_blank" rel="noopener"><img src="img/wa.png" alt="">Cek part via WhatsApp</a>
+        <a class="btn ghost" href="#katalog" data-go="7">Lihat katalog <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </div>
+      <ul class="badges rv" style="--d:.3s">
+        <li><svg class="ico" aria-hidden="true"><use href="#i-shield"/></svg>Original &amp;<br>OEM Quality</li>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-link"/></svg>Reliable<br>Supply</li>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-wrench"/></svg>Technical<br>Support</li>
+      </ul>
+      <p class="swipe rv" style="--d:.36s">Gulir ke bawah <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></p>
+    </div>
+    <div class="a3d" data-3d="injector" data-k="1.05" role="img" aria-label="Model 3D injector assy DIPO yang berputar">
+      <img class="fb" src="img/cat_inj.jpg" alt="Injector assy DIPO">
+      <span class="tag3d">Model 3D · gerakkan kursor</span>
+    </div>
+  </div>
+</section>
+
+<!-- 01 MITRA -->
+<section class="slide" data-name="Mitra" aria-label="Mitra injeksi bahan bakar diesel">
+  <div class="s2">
+    <div>
+      <p class="eyebrow rv">Tentang DIPO</p>
+      <h2 class="rv" style="--d:.05s">Mitra Injeksi Bahan Bakar Diesel Anda</h2>
+      <div class="rows rv" style="--d:.12s">
+        <div><h3>Fokus Tunggal</h3><p>Spesialisasi eksklusif pada sistem injeksi bahan bakar diesel performa tinggi.</p></div>
+        <div><h3>Ketahanan</h3><p>Dirancang untuk durabilitas maksimal pada kondisi operasional ekstrem.</p></div>
+        <div><h3>Presisi</h3><p>Memastikan efisiensi bahan bakar dan tenaga mesin yang optimal.</p></div>
+      </div>
+    </div>
+    <div class="a3d" data-3d="gears" data-k="1.0" role="img" aria-label="Dua roda gigi presisi yang berputar bersamaan"><span class="tag3d">Presisi tinggi</span></div>
+  </div>
+</section>
+
+<!-- 02 PRODUK -->
+<section class="slide" data-name="Produk" aria-label="Rentang produk">
+  <div class="s-head">
+    <p class="eyebrow rv">Rentang Produk</p>
+    <h2 class="rv" style="--d:.05s">Rentang Produk DIPO</h2>
+    <div class="prod">
+      <article class="card tilt rv" style="--d:.1s"><span class="n">01</span><div class="pic"><img src="img/cat_pump.jpg" alt="Injection pump DIPO" loading="lazy"></div><h3>Injection Pump</h3><p>Tekanan tinggi dengan spesifikasi setara OEM.</p></article>
+      <article class="card tilt rv" style="--d:.16s"><span class="n">02</span><div class="pic"><img src="img/cat_rail.jpg" alt="Common rail DIPO" loading="lazy"></div><h3>Common Rail</h3><p>Aliran dan tekanan stabil menuju setiap injektor.</p></article>
+      <article class="card tilt rv" style="--d:.22s"><span class="n">03</span><div class="pic"><img src="img/cat_inj.jpg" alt="Injector assy DIPO" loading="lazy"></div><h3>Injector Assy</h3><p>Atomisasi sempurna, siap pasang untuk berbagai mesin.</p></article>
+      <article class="card tilt rv" style="--d:.28s"><span class="n">04</span><div class="pic"><img src="img/cat_comp.jpg" alt="Komponen injektor DIPO" loading="lazy"></div><h3>Injector Components</h3><p>Nozzle, plunger, valve dan orifice plate.</p></article>
+    </div>
+  </div>
+</section>
+
+<!-- 03 SEKTOR -->
+<section class="slide" data-name="Sektor" aria-label="Aplikasi untuk berbagai sektor">
+  <div class="s2 rev wide-l">
+    <div class="sector tilt rv"><img src="img/sectors.png" alt="Ilustrasi isometrik: kendaraan diesel, truk dan bus, alat berat, ekskavator dan wheel loader" loading="lazy"></div>
+    <div>
+      <p class="eyebrow rv">Aplikasi</p>
+      <h2 class="rv" style="--d:.05s">Aplikasi DIPO untuk Berbagai Sektor</h2>
+      <ul class="pills rv" style="--d:.12s">
+        <li><svg class="ico" aria-hidden="true"><use href="#i-car"/></svg>Kendaraan Diesel</li>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-bus"/></svg>Truk &amp; Bus</li>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-dozer"/></svg>Alat Berat</li>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-exc"/></svg>Ekskavator</li>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-dozer"/></svg>Wheel Loader</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 04 TEKANAN TINGGI -->
+<section class="slide" data-name="Tekanan Tinggi" aria-label="Injection pump dan common rail">
+  <div class="s2 rev">
+    <div class="cut tilt rv" id="cut">
+      <img src="img/pump_cutaway.png" alt="Potongan injection pump dan common rail" loading="lazy">
+      <span class="hot" data-i="0" style="left:25.7%;top:30.5%"></span>
+      <span class="hot" data-i="1" style="left:20%;top:55.1%"></span>
+      <span class="hot" data-i="2" style="left:62.1%;top:79.8%"></span>
+    </div>
+    <div>
+      <p class="eyebrow rv">Sistem Tekanan Tinggi</p>
+      <h2 class="rv" style="--d:.05s">Injection Pump &amp; Common Rail</h2>
+      <div class="specs">
+        <div class="spec rv" style="--d:.12s" data-hot="0" tabindex="0"><h3>Toleransi Ekstrem</h3><p>Material baja padat dirancang untuk menahan tekanan bahan bakar berintensitas tinggi tanpa deformasi.</p></div>
+        <div class="spec rv" style="--d:.18s" data-hot="1" tabindex="0"><h3>Spesifikasi OEM</h3><p>Dimensi dan kalibrasi presisi yang setara dengan standar perakitan pabrik.</p></div>
+        <div class="spec rv" style="--d:.24s" data-hot="2" tabindex="0"><h3>Distribusi Optimal</h3><p>Common Rail memastikan aliran dan tekanan bahan bakar stabil menuju setiap injektor.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 INJECTOR -->
+<section class="slide" data-name="Injector" aria-label="Injector assy">
+  <div class="s2 rev">
+    <div class="a3d" data-3d="injector" data-k="1.1" data-pose="b" role="img" aria-label="Model 3D injector assy"><img class="fb" src="img/cat_inj.jpg" alt="Injector assy DIPO"><span class="tag3d">Injector assy</span></div>
+    <div>
+      <p class="eyebrow rv">Pengiriman Presisi</p>
+      <h2 class="rv" style="--d:.05s">Pengiriman Presisi: Injector Assy</h2>
+      <div class="callouts">
+        <div class="rv" style="--d:.12s"><h3>Atomisasi Sempurna</h3><p>Menghasilkan pola semprotan kabut bahan bakar yang sangat halus untuk pembakaran maksimal.</p></div>
+        <div class="rv" style="--d:.18s"><h3>Kualitas Teruji</h3><p>Menggunakan material anti-korosi dengan standar ketahanan panas level industri.</p></div>
+        <div class="rv" style="--d:.24s"><h3>Plug &amp; Play</h3><p>Kompatibilitas langsung untuk pemasangan instan pada berbagai merek mesin diesel utama.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 KOMPONEN -->
+<section class="slide" data-name="Komponen" aria-label="Komponen inti injektor">
+  <div class="s-head">
+    <p class="eyebrow rv">Komponen</p>
+    <h2 class="rv" style="--d:.05s">Presisi Mikro: Komponen Inti Injektor</h2>
+    <div class="parts">
+      <div class="part rv" style="--d:.1s"><div class="a3d" data-3d="nozzle" data-k=".86" role="img" aria-label="Model 3D nozzle"></div><div class="dim"></div><h3>Nozzle</h3><p>Akurasi semprotan dan pengkabutan bahan bakar.</p></div>
+      <div class="part rv" style="--d:.16s"><div class="a3d" data-3d="plunger" data-k=".86" role="img" aria-label="Model 3D plunger"></div><div class="dim"></div><h3>Plunger</h3><p>Penghasil dan penjaga tekanan tinggi internal.</p></div>
+      <div class="part rv" style="--d:.22s"><div class="a3d" data-3d="valve" data-k=".86" role="img" aria-label="Model 3D valve"></div><div class="dim"></div><h3>Valve</h3><p>Pengendali ritme dan kontrol aliran mekanis.</p></div>
+      <div class="part rv" style="--d:.28s"><div class="a3d" data-3d="orifice" data-k=".86" role="img" aria-label="Model 3D orifice plate"></div><div class="dim"></div><h3>Orifice Plate</h3><p>Regulator volume bahan bakar presisi tingkat mikron.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 07 KATALOG POMPA -->
+<section class="slide wide" id="katalog" data-name="Katalog Pompa" aria-label="Katalog pompa common rail">
+  <div class="cat">
+    <div class="cat-intro">
+      <p class="eyebrow rv">Katalog Kami</p>
+      <h2 class="rv" style="--d:.05s">Pompa Common Rail</h2>
+      <p class="lead rv" style="--d:.1s">Pilihan unggulan lengkap dengan part number dan aplikasi mesinnya.</p>
+      <a class="btn red rv" style="--d:.15s" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin cek part pompa common rail." target="_blank" rel="noopener"><img src="img/wa.png" alt="">Tanya via WhatsApp</a>
+    </div>
+
+    <article class="item"><div class="ph"><img src="img/pump1.jpg" alt="Pompa CPN2.2 0445020181" loading="lazy"><span class="no">01</span></div><div class="bd"><span class="k">Part number</span><div class="ti"><span class="pn">0445020181</span><svg class="ico" aria-label="Bus dan truk"><use href="#i-bus"/></svg></div><span class="tp">Tipe CPN2.2</span><p class="ap">Untuk mesin diesel kendaraan berat bus, truk, mesin Yuchai YC6L (Euro 4).</p><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya part 0445020181 (CPN2.2)." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+
+    <article class="item"><div class="ph"><img src="img/pump2.jpg" alt="Pompa CP3 0445020150" loading="lazy"><span class="no">02</span></div><div class="bd"><span class="k">Part number</span><div class="ti"><span class="pn">0445020150</span><svg class="ico" aria-label="Ekskavator"><use href="#i-exc"/></svg></div><span class="tp">Tipe CP3</span><p class="ap">Untuk ekskavator Komatsu PC200-8 dan untuk Cummins QSB 6.7 / ISDe 6.7.</p><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya part 0445020150 (CP3)." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+
+    <article class="item"><div class="ph"><img src="img/pump3.jpg" alt="Pompa 0445020083" loading="lazy"><span class="no">03</span></div><div class="bd"><span class="k">Part number</span><div class="ti"><span class="pn">0445020083</span><svg class="ico" aria-label="Ekskavator"><use href="#i-exc"/></svg></div><p class="ap">Untuk alat berat ekskavator mesin Mitsubishi. Kobelco SK130-8, SK140-8, SK140SR.</p><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya part 0445020083." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+
+    <article class="item"><div class="ph"><img src="img/pump4.jpg" alt="Pompa CP2.2 0445020058" loading="lazy"><span class="no">04</span></div><div class="bd"><span class="k">Part number</span><div class="ti"><span class="pn">0445020058</span><svg class="ico" aria-label="Truk"><use href="#i-truck"/></svg></div><span class="tp">Tipe CP2.2</span><p class="ap">Untuk Isuzu Traga Euro 4 mesin 4JA1-CR / 4JA1 turbo 2.500cc. Truk FAW 6DL1/6DL2 (6 silinder).</p><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya part 0445020058 (CP2.2)." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+
+    <article class="item"><div class="ph"><img src="img/pump5.jpg" alt="Pompa CP4 0445020608" loading="lazy"><span class="no">05</span></div><div class="bd"><span class="k">Part number</span><div class="ti"><span class="pn">0445020608</span><svg class="ico" aria-label="Ekskavator"><use href="#i-exc"/></svg></div><span class="tp">Tipe CP4</span><p class="ap">Alat berat untuk Sany, terutama ekskavator crawler dengan mesin Mitsubishi D06FR/D06FRC 6 silinder. Unit Sany: SY245, SY265, SY235, SY215.</p><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya part 0445020608 (CP4)." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+
+    <article class="item"><div class="ph"><img src="img/pump6.jpg" alt="Pompa HP4 294050-0102" loading="lazy"><span class="no">06</span></div><div class="bd"><span class="k">Part number</span><div class="ti"><span class="pn">294050-0102 / 8-98091565-3</span><svg class="ico" aria-label="Ekskavator"><use href="#i-exc"/></svg></div><span class="tp">Tipe HP4</span><p class="ap">Untuk mesin diesel Isuzu 6HK1. Unit ekskavator Sumitomo seri SH330/350, Hitachi Zaxis seri ZX330-3, ZX360.</p><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya part 294050-0102 (HP4)." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+
+    <article class="item"><div class="ph"><img src="img/pump7.jpg" alt="Pompa HP3 294000-0039" loading="lazy"><span class="no">07</span></div><div class="bd"><span class="k">Part number</span><div class="ti"><span class="pn">294000-0039</span><svg class="ico" aria-label="Ekskavator"><use href="#i-exc"/></svg></div><span class="tp">Tipe HP3</span><p class="ap">Untuk mesin Isuzu 4HK1 (4 silinder). Ekskavator Sumitomo seri SH200-5 dan Hitachi seri ZX200-3.</p><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya part 294000-0039 (HP3)." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+
+    <div class="cat-note">
+      <ul>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-gem"/></svg><span><b>Premium Quality</b><br>Material berkualitas tinggi dan tahan lama.</span></li>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-wrench"/></svg><span><b>Engineered Precision</b><br>Diproduksi dengan standar presisi tinggi.</span></li>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-layers"/></svg><span><b>Wide Application</b><br>Cocok untuk berbagai jenis mesin dan alat berat.</span></li>
+        <li><svg class="ico" aria-hidden="true"><use href="#i-shield"/></svg><span><b>Reliable Performance</b><br>Kinerja optimal untuk efisiensi dan daya tahan mesin.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 08 KATALOG PART -->
+<section class="slide wide" data-name="Nozzle & Plunger" aria-label="Katalog nozzle, plunger dan komponen">
+  <div class="cat">
+    <div class="cat-intro">
+      <p class="eyebrow rv">Katalog Kami</p>
+      <h2 class="rv" style="--d:.05s">Nozzle, Plunger &amp; Komponen</h2>
+      <p class="lead rv" style="--d:.1s">Sebagian dari lini komponen DIPO. Butuh part lain? Kirim part number atau foto part Anda.</p>
+    </div>
+
+    <article class="item"><div class="ph contain"><img src="img/nozzle1.jpg" alt="Nozzle DIPO DLLA 148 P1641" loading="lazy"></div><div class="bd"><span class="k">Nozzle</span><span class="pn">DLLA 148 P1641</span><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya Nozzle DIPO DLLA 148 P1641." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+    <article class="item"><div class="ph contain"><img src="img/nozzle2.jpg" alt="Nozzle DIPO DLLA 152 P947" loading="lazy"></div><div class="bd"><span class="k">Nozzle</span><span class="pn">DLLA 152 P947</span><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya Nozzle DIPO DLLA 152 P947." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+    <article class="item"><div class="ph contain"><img src="img/nozzle3.jpg" alt="Nozzle DIPO DLLA 158 P1096" loading="lazy"></div><div class="bd"><span class="k">Nozzle</span><span class="pn">DLLA 158 P1096</span><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya Nozzle DIPO DLLA 158 P1096." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+    <article class="item"><div class="ph contain"><img src="img/plunger5971.jpg" alt="Plunger DIPO 5971" loading="lazy"></div><div class="bd"><span class="k">Plunger</span><span class="pn">DIPO 5971</span><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya Plunger DIPO 5971." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+    <article class="item"><div class="ph contain"><img src="img/plungerp63.jpg" alt="Plunger DIPO P63" loading="lazy"></div><div class="bd"><span class="k">Plunger</span><span class="pn">P63</span><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya Plunger P63." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+    <article class="item"><div class="ph contain"><img src="img/rotor14b.jpg" alt="Komponen untuk 14B D850 Toyota" loading="lazy"></div><div class="bd"><span class="k">Komponen pompa</span><span class="pn">For 14B D850 Toyota</span><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya part for 14B D850 Toyota." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+    <article class="item"><div class="ph contain"><img src="img/plungercanter.jpg" alt="Plunger untuk Mitsubishi Canter dan Hino Dutro" loading="lazy"></div><div class="bd"><span class="k">Plunger</span><span class="pn">Mitsubishi Canter, Hino Dutro</span><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya part untuk Mitsubishi Canter / Hino Dutro." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+    <article class="item"><div class="ph contain"><img src="img/orifice05.jpg" alt="Orifice plate 05#" loading="lazy"></div><div class="bd"><span class="k">Orifice plate</span><span class="pn">05#</span><a class="btn ghost sm" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin tanya Orifice Plate 05#." target="_blank" rel="noopener">Tanya part ini</a></div></article>
+  </div>
+</section>
+
+<!-- 09 IDENTIFIKASI -->
+<section class="slide" data-name="Identifikasi" aria-label="Identifikasi part akurat">
+  <div class="s-head">
+    <p class="eyebrow rv">Keunggulan DIPO</p>
+    <h2 class="rv" style="--d:.05s">Identifikasi Part Akurat</h2>
+    <div class="flow">
+      <div class="step rv" style="--d:.1s"><div class="no">1</div><h3>Nomor Part</h3><p>Mulai dari part number atau foto part Anda.</p></div>
+      <div class="step rv" style="--d:.16s"><div class="no">2</div><h3>Aplikasi Mesin</h3><p>Dicocokkan dengan mesin dan unit yang dipakai.</p></div>
+      <div class="step rv" style="--d:.22s"><div class="no">3</div><h3>Kompatibilitas</h3><p>Diperiksa terhadap referensi pabrikan.</p></div>
+      <div class="step rv" style="--d:.28s"><div class="no">4</div><h3>Produk Tepat</h3><p>Komponen yang sesuai sampai ke tangan Anda.</p></div>
+    </div>
+    <p class="callout rv" style="--d:.34s"><b>Punya part number? Punya foto part? Tidak yakin part yang cocok?</b> DIPO membantu menyediakan komponen yang sesuai berdasarkan referensi dan aplikasi.</p>
+  </div>
+</section>
+
+<!-- 10 VERIFIKASI -->
+<section class="slide" data-name="Verifikasi" aria-label="Verifikasi pakar dan referensi silang">
+  <div class="s2">
+    <div>
+      <p class="eyebrow rv">Keunggulan DIPO</p>
+      <h2 class="rv" style="--d:.05s">Verifikasi Pakar &amp; Referensi Silang</h2>
+      <ul class="checks">
+        <li class="rv" style="--d:.12s"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Analisis foto dan dimensi fisik komponen.</li>
+        <li class="rv" style="--d:.18s"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Pencocokan silang (<i>cross-reference</i>) dengan database OEM global.</li>
+        <li class="rv" style="--d:.24s"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Jaminan kesesuaian part sebelum proses pemesanan.</li>
+      </ul>
+      <div class="cta-row rv" style="--d:.3s;margin-top:1.8rem"><a class="btn red" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin verifikasi part. Berikut foto/part number-nya:" target="_blank" rel="noopener"><img src="img/wa.png" alt="">Kirim foto part</a></div>
+    </div>
+    <div class="dimbox">
+      <div class="a3d" data-3d="injector" data-k="1.0" data-pose="h" role="img" aria-label="Model 3D injector dengan garis dimensi teknis"><img class="fb" src="img/cat_inj.jpg" alt="Injector assy"></div>
+      <svg class="dm" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="none" stroke="#4A4F57" stroke-width="1.2" vector-effect="non-scaling-stroke">
+          <path d="M30 30H370M30 22v16M370 22v16" vector-effect="non-scaling-stroke"/>
+          <path d="M385 70V230M377 70h16M377 230h16" vector-effect="non-scaling-stroke"/>
+          <path d="M30 270H210M30 262v16M210 262v16" vector-effect="non-scaling-stroke"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 11 MENGAPA -->
+<section class="slide" data-name="Keunggulan" aria-label="Mengapa memilih DIPO">
+  <div class="s-head">
+    <p class="eyebrow rv">Mengapa Memilih DIPO?</p>
+    <h2 class="rv" style="--d:.05s">Lima Alasan Memilih DIPO</h2>
+    <div class="why">
+      <article class="card tilt rv" style="--d:.1s"><span class="big">01</span><svg class="ico" aria-hidden="true"><use href="#i-gem"/></svg><h3>Quality</h3><p>Produk dengan standar kualitas yang terjamin dan durabilitas tinggi untuk beban kerja berat.</p></article>
+      <article class="card tilt rv" style="--d:.15s"><span class="big">02</span><svg class="ico" aria-hidden="true"><use href="#i-layers"/></svg><h3>Complete Range</h3><p>Solusi satu pintu yang komprehensif untuk berbagai kebutuhan sistem fuel injection diesel.</p></article>
+      <article class="card tilt rv" style="--d:.2s"><span class="big">03</span><svg class="ico" aria-hidden="true"><use href="#i-fit"/></svg><h3>Compatibility</h3><p>Dukungan pencocokan yang sangat akurat berdasarkan referensi pabrikan dan aplikasi lapangan.</p></article>
+      <article class="card tilt rv" style="--d:.25s"><span class="big">04</span><svg class="ico" aria-hidden="true"><use href="#i-headset"/></svg><h3>Technical Support</h3><p>Dukungan penuh dari tim ahli untuk kebutuhan identifikasi dan pengadaan part yang sulit dicari.</p></article>
+      <article class="card tilt rv" style="--d:.3s"><span class="big">05</span><svg class="ico" aria-hidden="true"><use href="#i-box"/></svg><h3>Reliable Supply</h3><p>Inventaris luas dan logistik yang dioptimalkan untuk mencegah downtime operasional Anda.</p></article>
+    </div>
+  </div>
+</section>
+
+<!-- 12 SUPLAI -->
+<section class="slide" data-name="Suplai" aria-label="Suplai terpercaya">
+  <div class="s-head">
+    <p class="eyebrow rv">05 · Reliable Supply</p>
+    <h2 class="rv" style="--d:.05s">Suplai Terpercaya</h2>
+    <figure class="stock rv" style="--d:.1s"><img src="img/warehouse.jpg" alt="Gudang dengan rak penuh stok bertuliskan 100% ready stock" loading="lazy"></figure>
+    <div class="tri rv" style="--d:.16s">
+      <div><h3>Ketersediaan Stok</h3><p>Inventaris yang luas dan selalu diperbarui untuk mencegah downtime operasional Anda.</p></div>
+      <div><h3>Pemenuhan Cepat</h3><p>Logistik yang dioptimalkan untuk pengiriman yang aman dan tepat waktu.</p></div>
+      <div><h3>Jalur Resmi</h3><p>Keamanan dan garansi keaslian dengan bertransaksi langsung melalui distributor resmi.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 13 DISTRIBUSI -->
+<section class="slide" data-name="Distribusi" aria-label="Jalur distribusi resmi">
+  <div class="s-head" style="text-align:center">
+    <p class="eyebrow rv" style="justify-content:center">Distribusi</p>
+    <h2 class="rv" style="--d:.05s">Jalur Distribusi Resmi</h2>
+    <div class="dist rv" style="--d:.1s;text-align:left">
+      <div class="node"><svg class="ico" aria-hidden="true"><use href="#i-factory"/></svg><div><small>Principal / Brand</small><h3>DIPO</h3></div></div>
+      <div class="pipe" aria-hidden="true"></div>
+      <div class="node main"><svg class="ico" aria-hidden="true"><use href="#i-box"/></svg><div><small>Jaringan resmi</small><h3>Official Distributor</h3></div></div>
+      <div class="pipe" aria-hidden="true"></div>
+      <div class="fan">
+        <div class="node"><svg class="ico" aria-hidden="true"><use href="#i-wrench"/></svg><h3>Bengkel</h3></div>
+        <div class="node"><svg class="ico" aria-hidden="true"><use href="#i-store"/></svg><h3>Toko Sparepart</h3></div>
+        <div class="node"><svg class="ico" aria-hidden="true"><use href="#i-truck"/></svg><h3>Fleet</h3></div>
+        <div class="node"><svg class="ico" aria-hidden="true"><use href="#i-factory"/></svg><h3>Industri</h3></div>
+      </div>
+    </div>
+    <p class="note rv" style="--d:.16s">Produk premium DIPO tersedia dan disuplai secara eksklusif melalui jaringan distribusi resmi di seluruh Indonesia.</p>
+  </div>
+</section>
+
+<!-- 14 SOLUSI -->
+<section class="slide" data-name="Solusi" aria-label="Solusi pengadaan diesel part">
+  <div class="s-head" style="display:flex;flex-direction:column;align-items:center;text-align:center">
+    <p class="eyebrow rv" style="justify-content:center">Untuk Siapa</p>
+    <h2 class="rv" style="--d:.05s">Solusi Pengadaan Diesel Part</h2>
+    <div class="hx-wrap rv" style="--d:.1s">
+      <div class="hx-row">
+        <div class="hx"><div><svg class="ico" aria-hidden="true"><use href="#i-helmet"/></svg>Perusahaan Tambang</div></div>
+        <div class="hx"><div><svg class="ico" aria-hidden="true"><use href="#i-swap"/></svg>Distributor / Reseller</div></div>
+        <div class="hx"><div><svg class="ico" aria-hidden="true"><use href="#i-dozer"/></svg>Kontraktor &amp; Alat Berat</div></div>
+        <div class="hx"><div><svg class="ico" aria-hidden="true"><use href="#i-wrench"/></svg>Bengkel Diesel</div></div>
+      </div>
+      <div class="hx-row">
+        <div class="hx"><div><svg class="ico" aria-hidden="true"><use href="#i-store"/></svg>Toko Sparepart</div></div>
+        <div class="hx"><div><svg class="ico" aria-hidden="true"><use href="#i-truck"/></svg>Fleet &amp; Transportasi</div></div>
+        <div class="hx"><div><svg class="ico" aria-hidden="true"><use href="#i-factory"/></svg>Industrial Maintenance</div></div>
+      </div>
+    </div>
+    <div class="band rv" style="--d:.16s;text-align:left;max-width:1000px"><p>Butuh supply rutin atau pengadaan dalam jumlah besar? Kami siap membantu manajemen rantai pasok Anda.</p><a class="btn red" href="https://wa.me/6287883828383" data-wa="Halo DIPO, kami butuh supply rutin / pengadaan dalam jumlah besar." target="_blank" rel="noopener"><img src="img/wa.png" alt="">Diskusikan kebutuhan</a></div>
+  </div>
+</section>
+
+<!-- 15 GLOBAL -->
+<section class="slide" data-name="Global" aria-label="Jangkauan pasar global">
+  <div class="s2 rev wide-l map">
+    <div class="mapbox tilt rv"><img src="img/map.png" alt="Peta jangkauan pasar DIPO: Amerika, Mesir, Afrika, Turki, India, Rusia dan Asia Tenggara" loading="lazy"></div>
+    <div>
+      <p class="eyebrow rv">Global Market</p>
+      <h2 class="rv" style="--d:.05s;font-size:clamp(2rem,3.6vw,3.6rem)">Solusi Sistem Bahan Bakar Diesel untuk Dunia</h2>
+      <p class="lead rv" style="--d:.1s">DIPO adalah brand global komponen sistem bahan bakar diesel yang dipercaya pelanggan di berbagai benua. Dibangun di atas manufaktur yang kuat, kontrol kualitas ketat dan kemitraan terpercaya.</p>
+      <div class="stats rv" style="--d:.15s">
+        <div class="stat"><b data-count="2018" data-plain="1">2018</b><span>hadir di Indonesia</span></div>
+        <div class="stat"><b data-count="7">7</b><span>negara Asia Tenggara</span></div>
+        <div class="stat"><b data-count="6">6</b><span>kawasan pasar lain</span></div>
+      </div>
+      <ul class="regions rv" style="--d:.2s" aria-label="Wilayah jangkauan"><li>Indonesia</li><li>Thailand</li><li>Myanmar</li><li>Laos</li><li>Malaysia</li><li>Vietnam</li><li>Filipina</li><li>Amerika</li><li>Mesir</li><li>Afrika</li><li>Turki</li><li>India</li><li>Rusia</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- 16 KONTAK -->
+<section class="slide cta" data-name="Kontak" aria-label="Hubungi kami">
+  <div class="s2">
+    <div>
+      <p class="eyebrow rv">Hubungi Kami</p>
+      <h2 class="rv" style="--d:.05s">Cari Part <em>DIPO</em>?</h2>
+      <p class="big2 rv" style="--d:.1s">Kirim Part Number atau Foto Part Anda sekarang.</p>
+      <p class="chain rv" style="--d:.15s">Kami bantu cek: <b>PART</b><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg><b>APLIKASI</b><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg><b>KETERSEDIAAN</b><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg><b>HARGA</b></p>
+      <a class="wa rv" style="--d:.2s" href="https://wa.me/6287883828383" data-wa="Halo DIPO, saya ingin cek part. Berikut part number / foto part saya:" target="_blank" rel="noopener"><img src="img/wa.png" alt=""><span><b>Hubungi Kami melalui WhatsApp</b><span class="mono">0878 8382 8383</span></span></a>
+      <div class="foot rv" style="--d:.25s"><img src="img/logo.png" alt="DIPO Naxtech"><span>Distributor resmi di seluruh Indonesia</span></div>
+    </div>
+    <div class="a3d" data-3d="injector" data-k="1.0" data-pose="c" role="img" aria-label="Model 3D injector assy"><img class="fb" src="img/cat_inj.jpg" alt="Injector assy DIPO"></div>
+  </div>
+</section>
+
+</main>
+
+<div id="prog" aria-hidden="true"></div>
+<nav class="rail" aria-label="Navigasi bagian">
+  <div class="ruler" id="ruler"><div class="minor"></div><div class="base"></div><div class="fill" id="fill"></div></div>
+  <div class="count" id="count"><b>01</b>/ 17</div>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var clamp=function(v,a,b){return Math.min(b,Math.max(a,v))};
+var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+var coarse=matchMedia('(pointer: coarse)').matches;
+var root=document.documentElement;
+
+/* ---------- link WhatsApp dengan pesan terisi ---------- */
+$$('[data-wa]').forEach(function(a){ a.href='https://wa.me/6287883828383?text='+encodeURIComponent(a.getAttribute('data-wa')); });
+
+/* ---------- gulir vertikal ---------- */
+var track=$('#track'), slides=$$('.slide',track), starts=[], maxS=1, W=innerWidth, H=innerHeight;
+var cur=0, idx=-1;
+var ruler=$('#ruler'), fill=$('#fill'), prog=$('#prog'), ticks=[];
+function measure(){
+  W=innerWidth; H=innerHeight; var sy=window.scrollY||0;
+  starts=slides.map(function(s){return Math.round(s.getBoundingClientRect().top+sy)});
+  maxS=Math.max(1,document.documentElement.scrollHeight-H); buildRuler();
+}
+function buildRuler(){
+  $$('.tk',ruler).forEach(function(t){t.remove()}); ticks=[];
+  slides.forEach(function(s,i){
+    var b=document.createElement('button'); b.className='tk'; b.type='button';
+    b.style.top=(clamp(starts[i]/maxS,0,1)*100)+'%';
+    b.setAttribute('aria-label',(i+1)+'. '+s.getAttribute('data-name'));
+    var sp=document.createElement('span'); sp.textContent=s.getAttribute('data-name'); b.appendChild(sp);
+    b.addEventListener('click',function(){goTo(i)});
+    ruler.appendChild(b); ticks.push(b);
+  });
+  setActive(idx<0?0:idx,true);
+}
+function goTo(i){ i=clamp(i,0,slides.length-1); window.scrollTo({top:starts[i]-(i?8:0),behavior:reduce?'auto':'smooth'}); }
+function curIndex(v){ var k=0; for(var i=0;i<starts.length;i++){ if(starts[i]<=v+H*.45) k=i; } return k; }
+addEventListener('scroll',function(){ cur=window.scrollY||0; },{passive:true});
+$$('[data-go]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();goTo(+a.getAttribute('data-go'))})});
+var secName=$('#secName'), count=$('#count');
+function setActive(i,force){
+  if(i===idx && !force) return; idx=i;
+  ticks.forEach(function(t,j){t.classList.toggle('on',j===i)});
+  secName.textContent=slides[i].getAttribute('data-name');
+  count.innerHTML='<b>'+String(i+1).padStart(2,'0')+'</b>/ '+slides.length;
+}
+
+/* ---------- reveal ---------- */
+var rvs=$$('.rv');
+function inView(el){ var r=el.getBoundingClientRect(); return r.bottom>0 && r.top<innerHeight*.92; }
+rvs.forEach(function(el){ if(inView(el)) el.classList.add('in'); });
+root.classList.add('js');
+if('IntersectionObserver' in window){
+  var io=new IntersectionObserver(function(es){ es.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); runCounters(en.target);} }); },{threshold:.1,rootMargin:'0px 0px -6% 0px'});
+  rvs.forEach(function(el){ if(!el.classList.contains('in')) io.observe(el); });
+}else rvs.forEach(function(el){el.classList.add('in')});
+function runCounters(scope){
+  $$('[data-count]',scope).forEach(function(n){
+    if(n.dataset.done) return; n.dataset.done=1;
+    var to=+n.getAttribute('data-count'); if(reduce||n.dataset.plain){n.textContent=to;return}
+    var t0=performance.now(); (function f(t){ var p=clamp((t-t0)/1100,0,1); n.textContent=Math.round(to*(1-Math.pow(1-p,3))); if(p<1) requestAnimationFrame(f); })(t0);
+  });
+}
+runCounters(document);
+
+/* ---------- kartu miring 3D ---------- */
+$$('.tilt').forEach(function(el){
+  if(coarse||reduce) return;
+  el.addEventListener('pointermove',function(e){ var r=el.getBoundingClientRect(); var x=(e.clientX-r.left)/r.width-.5, y=(e.clientY-r.top)/r.height-.5; el.style.setProperty('--ry',(x*9).toFixed(2)+'deg'); el.style.setProperty('--rx',(-y*9).toFixed(2)+'deg'); });
+  el.addEventListener('pointerleave',function(){ el.style.setProperty('--ry','0deg'); el.style.setProperty('--rx','0deg'); });
+});
+
+/* ---------- titik sorot pompa ---------- */
+var hots=$$('.hot');
+$$('.spec').forEach(function(s){
+  var i=+s.getAttribute('data-hot');
+  function on(v){ s.classList.toggle('on',v); hots[i].classList.toggle('on',v); }
+  s.addEventListener('mouseenter',function(){on(true)}); s.addEventListener('mouseleave',function(){on(false)});
+  s.addEventListener('focus',function(){on(true)}); s.addEventListener('blur',function(){on(false)});
+});
+
+/* ---------- 3D ---------- */
+var mx=0,my=0;
+addEventListener('pointermove',function(e){ mx=(e.clientX/innerWidth-.5)*2; my=(e.clientY/innerHeight-.5)*2; },{passive:true});
+var gl=null;
+if(typeof THREE==='undefined'){ root.classList.add('no-gl'); }
+else { try{ gl=initGL(); }catch(err){ console.warn('WebGL tidak tersedia',err); root.classList.add('no-gl'); } }
+
+function initGL(){
+  var canvas=$('#gl');
+  var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
+  renderer.setClearColor(0x000000,0);
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05;
+  var scene=new THREE.Scene();
+  var camera=new THREE.PerspectiveCamera(30,1,1,100); camera.position.z=20;
+  var wpp=1;
+  function resize(){
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, innerWidth<800?1.5:2));
+    renderer.setSize(innerWidth,innerHeight,false);
+    canvas.style.width=innerWidth+'px'; canvas.style.height=innerHeight+'px';
+    camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+    wpp=2*Math.tan(15*Math.PI/180)*20/innerHeight;
+  }
+  resize();
+
+  /* lingkungan studio: kubah gradasi + panel cahaya, dipanggang jadi peta pantulan */
+  var pm=new THREE.PMREMGenerator(renderer), envScene=new THREE.Scene();
+  var dg=new THREE.SphereGeometry(50,32,16), cols=[], pos=dg.attributes.position;
+  for(var vi=0;vi<pos.count;vi++){ var hh=pos.getY(vi)/50*.5+.5, sm=hh*hh*(3-2*hh), c0=.05+(.5-.05)*sm; cols.push(c0,c0+.01,c0+.02); }
+  dg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+  envScene.add(new THREE.Mesh(dg,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide})));
+  function panel(w,h,p,i){ var m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:new THREE.Color(i,i,i),side:THREE.DoubleSide})); m.position.set(p[0],p[1],p[2]); m.lookAt(0,0,0); envScene.add(m); }
+  for(var ki=0;ki<10;ki++){ var an=ki/10*Math.PI*2; panel(7,34,[Math.sin(an)*30,0,Math.cos(an)*30],ki%2?5:.02); }
+  panel(30,14,[0,26,4],6); panel(40,4,[0,-16,10],1.2);
+  scene.environment=pm.fromScene(envScene,.03).texture;
+  scene.add(new THREE.AmbientLight(0xffffff,.25));
+  var key=new THREE.DirectionalLight(0xffffff,.9); key.position.set(-6,10,12); scene.add(key);
+
+  var M={
+    steel:new THREE.MeshStandardMaterial({color:0xdadde1,metalness:1,roughness:.24}),
+    steel2:new THREE.MeshStandardMaterial({color:0xa9aeb5,metalness:1,roughness:.36}),
+    chrome:new THREE.MeshStandardMaterial({color:0xf2f4f7,metalness:1,roughness:.1}),
+    brass:new THREE.MeshStandardMaterial({color:0xd9a845,metalness:1,roughness:.26}),
+    copper:new THREE.MeshStandardMaterial({color:0xc4743f,metalness:1,roughness:.28}),
+    black:new THREE.MeshStandardMaterial({color:0x1d1f23,metalness:.2,roughness:.5}),
+    rubber:new THREE.MeshStandardMaterial({color:0x121316,metalness:0,roughness:.8}),
+    red:new THREE.MeshStandardMaterial({color:0xe70013,metalness:.55,roughness:.32}),
+    dark:new THREE.MeshStandardMaterial({color:0x0b0c0e,metalness:0,roughness:.9})
+  };
+  M.steelD=M.steel.clone(); M.steelD.side=THREE.DoubleSide;
+
+  function mesh(g,m,x,y,z){ var o=new THREE.Mesh(g,m); o.position.set(x||0,y||0,z||0); return o; }
+  function cyl(rb,rt,h,y,m,seg){ return mesh(new THREE.CylinderGeometry(rt,rb,h,seg||56),m,0,y+h/2,0); }
+  function lathe(pts,m,seg){ return new THREE.Mesh(new THREE.LatheGeometry(pts.map(function(p){return new THREE.Vector2(p[0],p[1])}),seg||64),m); }
+  function ring(r,t,y,m){ var o=mesh(new THREE.TorusGeometry(r,t,14,64),m,0,y,0); o.rotation.x=Math.PI/2; return o; }
+  function fit(g){ var b=new THREE.Box3().setFromObject(g),c=b.getCenter(new THREE.Vector3()),s=b.getSize(new THREE.Vector3()); g.position.sub(c); var w=new THREE.Group(); w.add(g); w.scale.setScalar(1/Math.max(s.x,s.y,s.z)); return w; }
+  function wrap(g,o){
+    o=o||{}; var w=fit(g), spin=new THREE.Group(), tilt=new THREE.Group(); spin.add(w); tilt.add(spin);
+    var rx=o.rx||0, ry=o.ry||0, rz=o.rz||0, sp=o.speed===undefined?.55:o.speed, ax=o.axis||'y', ss=o.scroll===undefined?.0022:o.scroll, ph=o.phase||0;
+    tilt.rotation.set(rx,ry,rz);
+    return {root:tilt,tick:function(t,sv,x,y){ spin.rotation[ax]=ph+(reduce?0:t*sp)+sv*ss; tilt.rotation.x=rx+y*.12; tilt.rotation.y=ry+x*.22; }};
+  }
+
+  var B={};
+  B.injector=function(pose){
+    var g=new THREE.Group();
+    g.add(lathe([[0,0],[.05,.02],[.075,.1],[.11,.55],[.15,1.1],[.15,1.2]],M.steel2));
+    g.add(cyl(.16,.19,.08,1.15,M.steel)); g.add(cyl(.19,.19,.77,1.23,M.steel)); g.add(cyl(.205,.205,.1,1.65,M.red));
+    g.add(cyl(.27,.27,.07,2.0,M.copper));
+    g.add(cyl(.255,.255,.95,2.07,M.steel2));
+    var pts=[]; for(var i=0;i<11;i++){ var y0=2.07+i*.085; pts.push([.255,y0],[.305,y0+.04],[.255,y0+.085]); } g.add(lathe(pts,M.steel,48));
+    g.add(cyl(.31,.31,1.55,3.0,M.steel)); g.add(ring(.31,.03,3.35,M.rubber)); g.add(ring(.31,.03,3.72,M.rubber));
+    g.add(cyl(.325,.325,.12,4.1,M.chrome)); g.add(cyl(.3,.3,.3,4.52,M.steel));
+    var hex=mesh(new THREE.CylinderGeometry(.47,.47,.42,6),M.steel,0,5.05,0); g.add(hex);
+    g.add(cyl(.34,.34,.55,5.26,M.steel2));
+    g.add(mesh(new THREE.BoxGeometry(.66,.92,.52),M.black,0,6.3,0)); g.add(mesh(new THREE.BoxGeometry(.44,.2,.34),M.dark,0,6.72,0)); g.add(mesh(new THREE.BoxGeometry(.2,.12,.56),M.black,0,6.5,0));
+    g.add(mesh(new THREE.BoxGeometry(.4,.44,.42),M.steel,.34,4.3,0));
+    var tube=mesh(new THREE.CylinderGeometry(.13,.13,.42,36),M.steel,.68,4.3,0); tube.rotation.z=Math.PI/2; g.add(tube);
+    var nut=mesh(new THREE.CylinderGeometry(.2,.2,.22,6),M.brass,.96,4.3,0); nut.rotation.z=Math.PI/2; g.add(nut);
+    var tip=mesh(new THREE.CylinderGeometry(.12,.12,.2,32),M.steel2,1.16,4.3,0); tip.rotation.z=Math.PI/2; g.add(tip);
+    var P={a:{rz:-.78,rx:.12,speed:.6},b:{rz:-.62,rx:.1,speed:.5,phase:1},h:{rz:-Math.PI/2+.04,rx:.2,speed:.4},c:{rz:-.5,rx:.1,speed:.5,phase:2.2}}[pose||'a'];
+    return wrap(g,P);
+  };
+  function gearGeo(n,ro,ri,hole,depth,extra){
+    var s=new THREE.Shape(), st=Math.PI*2/n;
+    for(var i=0;i<n;i++){ var a=i*st; [[.04,ri],[.16,ro],[.40,ro],[.52,ri]].forEach(function(q,j){ var an=a+st*q[0], x=Math.cos(an)*q[1], y=Math.sin(an)*q[1]; if(i===0&&j===0) s.moveTo(x,y); else s.lineTo(x,y); }); }
+    s.closePath(); var h=new THREE.Path(); h.absarc(0,0,hole,0,Math.PI*2,true); s.holes.push(h);
+    (extra||[]).forEach(function(e){ var q=new THREE.Path(); q.absarc(e[0],e[1],e[2],0,Math.PI*2,true); s.holes.push(q); });
+    return new THREE.ExtrudeGeometry(s,{depth:depth,bevelEnabled:true,bevelThickness:.03,bevelSize:.03,bevelSegments:2,curveSegments:24});
+  }
+  B.gears=function(){
+    var g=new THREE.Group(), nA=22, nB=13, stA=Math.PI*2/nA, stB=Math.PI*2/nB, phi=.62, d=1.5;
+    var A=new THREE.Group(), Bg=new THREE.Group();
+    function axle(r,len){ var o=mesh(new THREE.CylinderGeometry(r,r,len,32),M.chrome,0,0,.17); o.rotation.x=Math.PI/2; return o; }
+    var hs=[]; for(var hi=0;hi<5;hi++){ var ha=hi*Math.PI*2/5; hs.push([Math.cos(ha)*.5,Math.sin(ha)*.5,.1]); }
+    A.add(mesh(gearGeo(nA,1.0,.84,.22,.34,hs),M.steel)); A.add(mesh(new THREE.TorusGeometry(.56,.035,12,64),M.steel2,0,0,.17)); A.add(axle(.2,.56));
+    Bg.add(mesh(gearGeo(nB,.62,.47,.13,.34),M.brass)); Bg.add(axle(.14,.56));
+    Bg.position.set(Math.cos(phi)*d,Math.sin(phi)*d,0); g.add(A,Bg);
+    var a0=phi-.28*stA, b0=phi+Math.PI-.78*stB;
+    var w=fit(g), tilt=new THREE.Group(); tilt.add(w); tilt.rotation.set(0,0,0);
+    return {root:tilt,tick:function(t,sv,x,y){ var dl=(reduce?0:t*.35)+sv*.0016; A.rotation.z=a0+dl; Bg.rotation.z=b0-dl*(nA/nB); tilt.rotation.x=y*.16; tilt.rotation.y=-.35+x*.25; }};
+  };
+  B.nozzle=function(){
+    var g=new THREE.Group();
+    g.add(lathe([[0,1.35],[.07,1.33],[.2,1.1],[.37,.64],[.44,.5],[.44,0],[.34,0],[.34,.34],[0,.34]],M.steelD,72));
+    g.add(cyl(.455,.455,.05,.16,M.steel2,72));
+    for(var i=0;i<7;i++){ var an=i/7*Math.PI*2, r=.3, n=new THREE.Vector3(Math.cos(an)*.9,.45,Math.sin(an)*.9).normalize(); var h=mesh(new THREE.CylinderGeometry(.035,.035,.14,12),M.dark,Math.cos(an)*r,.86,Math.sin(an)*r); h.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),n); g.add(h); }
+    return wrap(g,{rz:-Math.PI/2+.5,rx:.25,speed:.7});
+  };
+  B.plunger=function(){
+    var g=new THREE.Group();
+    g.add(cyl(.32,.32,1.7,0,M.steel)); [.28,.44,.6].forEach(function(y){ g.add(cyl(.27,.27,.06,y,M.steel2)); });
+    g.add(cyl(.2,.2,.55,1.7,M.steel)); g.add(cyl(.34,.34,.12,2.0,M.steel2)); g.add(cyl(.14,.14,.4,-.4,M.chrome,32));
+    g.add(ring(.322,.012,1.1,M.black)); g.add(ring(.322,.012,1.25,M.black));
+    return wrap(g,{rz:-Math.PI/2+.5,rx:.25,speed:.7,phase:1});
+  };
+  B.valve=function(){
+    var g=new THREE.Group();
+    g.add(cyl(.38,.38,.55,0,M.steel2)); g.add(ring(.385,.04,.18,M.rubber)); g.add(ring(.385,.04,.4,M.rubber));
+    g.add(mesh(new THREE.CylinderGeometry(.5,.5,.14,6),M.steel,0,.62,0)); g.add(cyl(.26,.26,.3,.69,M.steel));
+    var pts=[]; for(var i=0;i<=120;i++){ var u=i/120, a=u*Math.PI*2*6; pts.push(new THREE.Vector3(Math.cos(a)*.27,1.0+u*.7,Math.sin(a)*.27)); }
+    g.add(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),240,.035,8,false),M.chrome));
+    g.add(cyl(.34,.34,.1,1.7,M.steel));
+    return wrap(g,{rz:-Math.PI/2+.5,rx:.25,speed:.7,phase:2});
+  };
+  B.orifice=function(){
+    var s=new THREE.Shape(); s.absarc(0,0,.95,0,Math.PI*2,false); var h=new THREE.Path(); h.absarc(0,0,.07,0,Math.PI*2,true); s.holes.push(h);
+    var g=new THREE.Group(); g.add(mesh(new THREE.ExtrudeGeometry(s,{depth:.07,bevelEnabled:true,bevelThickness:.02,bevelSize:.02,bevelSegments:2,curveSegments:64}),M.steel2));
+    var rg=ring(.55,.012,0,M.chrome); rg.rotation.x=0; g.add(rg);
+    return wrap(g,{rx:.15,ry:.4,speed:.6});
+  };
+
+  /* jangkar: setiap elemen .a3d membawa satu model */
+  var anchors=$$('.a3d[data-3d]').map(function(el){
+    var m=B[el.getAttribute('data-3d')](el.getAttribute('data-pose')), holder=new THREE.Group(); holder.add(m.root); holder.visible=false; scene.add(holder);
+    return {el:el,k:+(el.getAttribute('data-k')||1),m:m,holder:holder};
+  });
+
+  var t0=performance.now(), anyVisible=true;
+  function render(now){
+    var t=(now-t0)/1000, any=false;
+    for(var i=0;i<anchors.length;i++){
+      var a=anchors[i], r=a.el.getBoundingClientRect();
+      if(r.right<-80||r.left>innerWidth+80||r.bottom<0||r.top>innerHeight||r.width<8){ a.holder.visible=false; continue; }
+      any=true; a.holder.visible=true;
+      a.holder.position.set((r.left+r.width/2-innerWidth/2)*wpp,-(r.top+r.height/2-innerHeight/2)*wpp,0);
+      a.holder.scale.setScalar(Math.min(r.width,r.height*1.02)*wpp*a.k);
+      a.m.tick(t+i*.7,cur,mx*.5,my*.5);
+    }
+    if(any||anyVisible) renderer.render(scene,camera);
+    anyVisible=any;
+  }
+  return {render:render,resize:resize};
+}
+
+/* ---------- loop utama ---------- */
+var bpEl=$('#bp');
+function loop(now){
+  cur=window.scrollY||0;
+  var y=(-cur*.28)+'px'; bpEl.style.backgroundPosition='0 '+y+',0 '+y+',0 '+y+',0 '+y;
+  var p=clamp(cur/maxS,0,1); fill.style.height=(p*100)+'%'; prog.style.transform='scaleX('+p+')';
+  setActive(curIndex(cur));
+  if(gl) gl.render(now);
+  requestAnimationFrame(loop);
+}
+var rt; function remeasure(){ clearTimeout(rt); rt=setTimeout(function(){ measure(); },150); }
+addEventListener('resize',function(){ if(gl) gl.resize(); remeasure(); });
+if('ResizeObserver' in window) new ResizeObserver(remeasure).observe(document.body);
+function boot(){ measure(); setActive(0,true); requestAnimationFrame(loop); }
+boot();
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(measure);
+addEventListener('load',measure);
+})();
+</script>
+</body>
+</html>
